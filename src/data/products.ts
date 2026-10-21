@@ -52,7 +52,7 @@ export const products: Product[] = [
     description: "Look your best in every meeting and stream. Delivers crystal-clear 4K resolution and features an integrated noise-reducing microphone.",
     price: 129.99,
     category: "accessories",
-    image: "https://images.unsplash.com/photo-1620311287600-b6aa28d3e230?q=80&w=1000&auto=format&fit=crop",
+    image: "https://images.unsplash.com/photo-1544427920-c49ccfb85579?q=80&w=1000&auto=format&fit=crop",
     features: ["4K Ultra HD resolution", "Auto-focus and light correction", "Privacy shutter", "Built-in dual mics"],
   },
 ];
