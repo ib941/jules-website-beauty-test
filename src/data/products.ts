@@ -1,0 +1,58 @@
+import { Product } from "@/store/useStore";
+
+export const products: Product[] = [
+  {
+    id: "prod-1",
+    name: "Quantum X Pro Laptop",
+    description: "The ultimate machine for professionals and creators. Features a brilliant 16-inch OLED display, next-gen neural processing, and all-day battery life.",
+    price: 1899.99,
+    category: "laptops",
+    image: "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?q=80&w=1000&auto=format&fit=crop",
+    features: ["16-inch 4K OLED Display", "32GB Unified Memory", "1TB NVMe SSD", "Up to 20 hours battery"],
+  },
+  {
+    id: "prod-2",
+    name: "SonicWave Noise-Cancelling Headphones",
+    description: "Immerse yourself in pure audio with industry-leading active noise cancellation and high-resolution sound reproduction.",
+    price: 299.99,
+    category: "accessories",
+    image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=1000&auto=format&fit=crop",
+    features: ["Active Noise Cancellation", "40mm Drivers", "30-hour battery life", "Multipoint Bluetooth connection"],
+  },
+  {
+    id: "prod-3",
+    name: "ErgoClick Wireless Mouse",
+    description: "Designed for comfort and precision. Reduces wrist strain during long hours of work or gaming with its ergonomic vertical design.",
+    price: 79.99,
+    category: "accessories",
+    image: "https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?q=80&w=1000&auto=format&fit=crop",
+    features: ["Ergonomic vertical design", "Adjustable DPI (800-4000)", "USB-C charging", "Customizable buttons"],
+  },
+  {
+    id: "prod-4",
+    name: "Nexus Ultra Smartphone",
+    description: "Capture the world in stunning detail with the new 108MP camera system. Features a silky smooth 120Hz display and lightning-fast 5G connectivity.",
+    price: 999.99,
+    category: "smartphones",
+    image: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=1000&auto=format&fit=crop",
+    features: ["6.7-inch AMOLED 120Hz", "108MP Triple Camera", "5000mAh Battery", "Fast 65W Charging"],
+  },
+  {
+    id: "prod-5",
+    name: "Lumina Mechanical Keyboard",
+    description: "Elevate your typing experience with tactile mechanical switches and fully customizable RGB backlighting.",
+    price: 149.99,
+    category: "accessories",
+    image: "https://images.unsplash.com/photo-1595225476474-87563907a212?q=80&w=1000&auto=format&fit=crop",
+    features: ["Tactile Blue Switches", "Per-key RGB Lighting", "Aircraft-grade aluminum frame", "Detachable USB-C cable"],
+  },
+  {
+    id: "prod-6",
+    name: "StreamCast 4K Webcam",
+    description: "Look your best in every meeting and stream. Delivers crystal-clear 4K resolution and features an integrated noise-reducing microphone.",
+    price: 129.99,
+    category: "accessories",
+    image: "https://images.unsplash.com/photo-1620311287600-b6aa28d3e230?q=80&w=1000&auto=format&fit=crop",
+    features: ["4K Ultra HD resolution", "Auto-focus and light correction", "Privacy shutter", "Built-in dual mics"],
+  },
+];

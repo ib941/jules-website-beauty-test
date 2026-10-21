@@ -1,0 +1,14 @@
+
+> my-store@0.1.0 start
+> next start
+
+▲ Next.js 16.4.2
+- Local:         http://localhost:3000
+- Network:       http://192.168.0.2:3000
+✓ Ready in 199ms
+✓ Running next.config.ts took 43ms
+⨯ upstream image response failed for https://images.unsplash.com/photo-1620311287600-b6aa28d3e230?q=80&w=1000&auto=format&fit=crop 404
+⨯ upstream image response failed for https://images.unsplash.com/photo-1620311287600-b6aa28d3e230?q=80&w=1000&auto=format&fit=crop 404
+⨯ upstream image response failed for https://images.unsplash.com/photo-1620311287600-b6aa28d3e230?q=80&w=1000&auto=format&fit=crop 404
+⨯ upstream image response failed for https://images.unsplash.com/photo-1620311287600-b6aa28d3e230?q=80&w=1000&auto=format&fit=crop 404
+⨯ upstream image response failed for https://images.unsplash.com/photo-1620311287600-b6aa28d3e230?q=80&w=1000&auto=format&fit=crop 404
