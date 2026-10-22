@@ -12,23 +12,44 @@ import {
   CheckCircle2,
   ShoppingCart,
   ArrowRight,
-  Maximize2,
-  Minimize2,
   RefreshCw,
   Cpu,
 } from "lucide-react";
 import { useStore } from "@/store/useStore";
 import { products } from "@/data/products";
 
+/**
+ * Strips <think>...</think> reasoning tags and detects if the model is currently generating reasoning tokens.
+ */
+function processReasoning(rawText: string) {
+  if (!rawText) return { cleanText: "", isThinking: false };
+
+  // Detect if there is an unclosed <think> tag (i.e. model is actively outputting thoughts)
+  const hasUnclosedThink = /<think>(?![\s\S]*<\/think>)/i.test(rawText);
+
+  // Strip all completed <think>...</think> blocks
+  let cleanText = rawText.replace(/<think>[\s\S]*?<\/think>/gi, "");
+
+  // Strip any trailing unclosed <think> block
+  cleanText = cleanText.replace(/<think>[\s\S]*$/gi, "");
+
+  cleanText = cleanText.trim();
+
+  return {
+    cleanText,
+    isThinking: hasUnclosedThink,
+  };
+}
+
 export default function StoreAssistant() {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  const { messages, sendMessage, status, stop } = useChat();
+  const { messages, sendMessage, status } = useChat();
   const isLoading = status === "submitted" || status === "streaming";
 
-  // Scroll to bottom whenever messages update
+  // Auto-scroll to bottom on message stream updates
   useEffect(() => {
     if (isOpen) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -94,7 +115,7 @@ export default function StoreAssistant() {
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                 </div>
                 <p className="text-[10px] font-mono text-zinc-400">
-                  Groq Engine • GPT OSS 120B
+                  Groq Engine • openai/gpt-oss-120b
                 </p>
               </div>
             </div>
@@ -118,8 +139,11 @@ export default function StoreAssistant() {
                   <span>Welcome to Tech Haven</span>
                 </div>
                 <p className="text-xs leading-relaxed text-zinc-300">
-                  I&apos;m your AI hardware consultant powered by Groq&apos;s GPT OSS 120B.
-                  Ask me to recommend laptops for your workload, or tell me to add any flagship
+                  I&apos;m your AI hardware specialist powered by Groq&apos;s{" "}
+                  <code className="text-violet-300 font-mono text-[11px] bg-zinc-800 px-1 py-0.5 rounded">
+                    openai/gpt-oss-120b
+                  </code>
+                  . Ask me to recommend laptops for your workload, or tell me to add any flagship
                   directly to your cart.
                 </p>
 
@@ -159,8 +183,9 @@ export default function StoreAssistant() {
             )}
 
             {/* Render Conversation Messages */}
-            {messages.map((message: any) => {
+            {messages.map((message: any, index: number) => {
               const isUser = message.role === "user";
+              const isLastMessage = index === messages.length - 1;
 
               return (
                 <div
@@ -192,17 +217,18 @@ export default function StoreAssistant() {
                     <MessageRenderer
                       message={message}
                       onSyncToStore={handleSyncToStore}
+                      isMessageStreaming={isLastMessage && isLoading}
                     />
                   </div>
                 </div>
               );
             })}
 
-            {/* Streaming Indicator */}
-            {isLoading && (
+            {/* General Thinking Indicator when no assistant message has arrived yet */}
+            {isLoading && messages[messages.length - 1]?.role === "user" && (
               <div className="flex items-center gap-2 p-3 rounded-2xl bg-zinc-900 border border-zinc-800 w-fit text-xs text-zinc-400">
-                <div className="w-2 h-2 rounded-full bg-violet-400 animate-ping" />
-                <span>Thinking via GPT OSS 120B...</span>
+                <Sparkles size={13} className="text-violet-400 animate-spin" />
+                <span>Analyzing options...</span>
               </div>
             )}
 
@@ -248,35 +274,59 @@ export default function StoreAssistant() {
 }
 
 /* =========================================================================
-   Message Renderer (supports text, parts, and addToCart tool confirmations)
+   Message Renderer (strips <think> tags, renders placeholder, and shows tool cards)
    ========================================================================= */
 interface MessageRendererProps {
   message: any;
   onSyncToStore: (productId: string, quantity?: number) => void;
+  isMessageStreaming?: boolean;
 }
 
-function MessageRenderer({ message, onSyncToStore }: MessageRendererProps) {
+function MessageRenderer({
+  message,
+  onSyncToStore,
+  isMessageStreaming,
+}: MessageRendererProps) {
   const parts = message.parts || [];
   const toolInvocations = message.toolInvocations || [];
 
+  // Extract raw text from message content or text parts
+  let rawText = message.content || "";
+  if (!rawText && parts.length > 0) {
+    const textParts = parts.filter((p: any) => p.type === "text").map((p: any) => p.text);
+    rawText = textParts.join("\n");
+  }
+
+  // Intercept and strip <think>...</think> reasoning tags
+  const { cleanText, isThinking } = processReasoning(rawText);
+
+  // Check if there is an explicit reasoning part in the message
+  const hasReasoningPart = parts.some((p: any) => p.type === "reasoning");
+
+  // Show "Analyzing options..." placeholder if AI is currently generating reasoning tokens
+  const showAnalyzingPlaceholder =
+    isThinking || hasReasoningPart || (!cleanText && isMessageStreaming);
+
   return (
     <div className="space-y-3">
-      {/* 1. Direct Text content if no parts */}
-      {message.content && parts.length === 0 && (
-        <div className="whitespace-pre-wrap leading-relaxed">{message.content}</div>
+      {/* "Analyzing options..." placeholder while generating reasoning */}
+      {showAnalyzingPlaceholder && (
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-violet-950/40 border border-violet-500/30 text-xs text-violet-300 animate-pulse">
+          <Sparkles size={13} className="text-violet-400" />
+          <span>Analyzing options...</span>
+        </div>
       )}
 
-      {/* 2. Parts array (AI SDK UIMessage protocol) */}
-      {parts.map((part: any, idx: number) => {
-        if (part.type === "text") {
-          return (
-            <div key={idx} className="whitespace-pre-wrap leading-relaxed">
-              {part.text}
-            </div>
-          );
-        }
+      {/* Clean response text with all <think> tags stripped */}
+      {cleanText && (
+        <div className="whitespace-pre-wrap leading-relaxed">{cleanText}</div>
+      )}
 
-        // Check for addToCart tool call in parts
+      {/* Tool invocations in parts (AI SDK UIMessage protocol) */}
+      {parts.map((part: any, idx: number) => {
+        // Skip text and reasoning parts
+        if (part.type === "text" || part.type === "reasoning") return null;
+
         const isAddToCart =
           part.type === "tool-addToCart" ||
           (part.type === "dynamic-tool" && part.toolName === "addToCart");
@@ -307,7 +357,7 @@ function MessageRenderer({ message, onSyncToStore }: MessageRendererProps) {
         return null;
       })}
 
-      {/* 3. Explicit toolInvocations array support */}
+      {/* Tool invocations array (legacy / prompt specification) */}
       {toolInvocations.map((inv: any, idx: number) => {
         if (inv.toolName === "addToCart" && inv.state === "result") {
           return (

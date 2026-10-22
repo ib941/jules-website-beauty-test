@@ -5,7 +5,7 @@ import { products } from "@/data/products";
 
 export const maxDuration = 30;
 
-// Configure @ai-sdk/openai provider to connect to Groq's high-speed inference endpoint
+// Configure @ai-sdk/openai provider to connect to Groq's inference endpoint
 const groq = createOpenAI({
   baseURL: "https://api.groq.com/openai/v1",
   apiKey: process.env.GROQ_API_KEY || "",
@@ -26,9 +26,10 @@ Flagship products currently in stock:
 
 Important instructions:
 1. When recommending a laptop or product, highlight key specs, performance benefits, and pricing.
-2. ALWAYS explicitly ask the user: "Would you like me to add this to your cart for you?"
+2. ALWAYS explicitly ask users if they want to add recommended laptops to their cart: "Would you like me to add this to your cart for you?"
 3. If the user confirms (e.g. says "yes", "add it", "add to cart", "buy it", or asks you to add an item), immediately invoke the addToCart tool with the corresponding productId and quantity!
-4. Be concise, friendly, and format your response neatly with Markdown.`;
+4. STRICT INSTRUCTION: Strictly do NOT output any internal reasoning, scratchpad thoughts, or <think>...</think> tags. Always output only direct, clean, customer-facing response text.
+5. Be concise, friendly, and format your response neatly with Markdown.`;
 
 // Define the addToCart tool with Zod schema
 const addToCart = tool({
@@ -74,16 +75,16 @@ export async function POST(req: Request) {
 
       const responseText = shouldSimulateCart
         ? `I have simulated adding the **Quantum X Pro 16" Laptop** (prod-1) to your cart! 🛍️\n\n*(Note: Please set \`GROQ_API_KEY\` in your environment or Vercel dashboard to enable live GPT OSS 120B inference.)*`
-        : `👋 Hello! I'm your **Tech Haven AI Shopping Assistant**.\n\nI recommend our flagship **Quantum X Pro 16" Laptop** ($1,899.99) featuring a 16-Core Neural SoC and 4K OLED display.\n\n**Would you like me to add this to your cart for you?**\n\n*(Note: Configure \`GROQ_API_KEY\` in your Vercel/local environment to connect directly to the GPT OSS 120B model on Groq).*`;
+        : `👋 Hello! I'm your **Tech Haven AI Shopping Assistant**.\n\nI recommend our flagship **Quantum X Pro 16" Laptop** ($1,899.99) featuring a 16-Core Neural SoC and 4K OLED display.\n\n**Would you like me to add this to your cart for you?**\n\n*(Note: Configure \`GROQ_API_KEY\` in your Vercel/local environment to connect directly to the openai/gpt-oss-120b model on Groq).*`;
 
       return new Response(responseText, {
         headers: { "Content-Type": "text/plain; charset=utf-8" },
       });
     }
 
-    // Call Groq inference engine with GPT OSS 120B model
+    // Call Groq inference engine with exact model ID: openai/gpt-oss-120b
     const result = streamText({
-      model: groq("gpt-oss-120b"),
+      model: groq("openai/gpt-oss-120b"),
       system: systemPrompt,
       messages,
       tools: {
