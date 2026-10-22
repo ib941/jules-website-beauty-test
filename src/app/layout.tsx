@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import AnnouncementBar from "@/components/AnnouncementBar";
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+import StoreAssistant from "@/components/StoreAssistant";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,8 +18,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Tech Haven | Online Demo Store",
-  description: "A modern tech online demo store built with Next.js",
+  title: "Tech Haven | Flagship Online Tech & Hardware Store",
+  description: "Next-generation laptops, spatial audio, smart wearables, and precision peripherals. Built with Next.js & Tailwind CSS.",
 };
 
 export default function RootLayout({
@@ -32,11 +35,11 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 transition-colors duration-300">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          <AnnouncementBar />
           <Navbar />
           <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">{children}</main>
-          <footer className="border-t border-zinc-200 dark:border-zinc-800 py-8 text-center text-zinc-500 text-sm">
-            <p>&copy; {2025} Tech Haven Demo. No real purchases can be made.</p>
-          </footer>
+          <Footer />
+          <StoreAssistant />
         </ThemeProvider>
       </body>
     </html>

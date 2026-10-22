@@ -8,6 +8,18 @@ export interface Product {
   category: string;
   image: string;
   features: string[];
+  originalPrice?: number;
+  rating?: number;
+  reviewsCount?: number;
+  badge?: string;
+  tagline?: string;
+  inStock?: boolean;
+  stockCount?: number;
+  specs?: Record<string, string>;
+  colors?: { name: string; hex: string }[];
+  isFeatured?: boolean;
+  isFlashDeal?: boolean;
+  discountPercentage?: number;
 }
 
 export interface CartItem {
@@ -17,7 +29,7 @@ export interface CartItem {
 
 interface StoreState {
   cart: CartItem[];
-  addToCart: (product: Product) => void;
+  addToCart: (product: Product, quantity?: number) => void;
   removeFromCart: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
@@ -25,19 +37,19 @@ interface StoreState {
 
 export const useStore = create<StoreState>((set) => ({
   cart: [],
-  addToCart: (product) =>
+  addToCart: (product, quantity = 1) =>
     set((state) => {
       const existingItem = state.cart.find((item) => item.product.id === product.id);
       if (existingItem) {
         return {
           cart: state.cart.map((item) =>
             item.product.id === product.id
-              ? { ...item, quantity: item.quantity + 1 }
+              ? { ...item, quantity: item.quantity + quantity }
               : item
           ),
         };
       }
-      return { cart: [...state.cart, { product, quantity: 1 }] };
+      return { cart: [...state.cart, { product, quantity }] };
     }),
   removeFromCart: (productId) =>
     set((state) => ({

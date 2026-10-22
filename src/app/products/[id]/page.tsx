@@ -1,9 +1,27 @@
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import { products } from "@/data/products";
-import AddToCartButton from "@/components/AddToCartButton";
 import Link from "next/link";
-import { ArrowLeft, ShieldCheck, Truck, RotateCcw } from "lucide-react";
+import { ChevronRight, ArrowLeft } from "lucide-react";
+import ProductDetailClient from "@/components/ProductDetailClient";
+import ProductCard from "@/components/ProductCard";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const product = products.find((p) => p.id === id);
+
+  if (!product) {
+    return { title: "Product Not Found | Tech Haven" };
+  }
+
+  return {
+    title: `${product.name} | Tech Haven`,
+    description: product.description,
+  };
+}
 
 export default async function ProductDetailsPage({
   params,
@@ -17,69 +35,73 @@ export default async function ProductDetailsPage({
     notFound();
   }
 
+  // Related products from same category, excluding current product
+  const relatedProducts = products
+    .filter((p) => p.category === product.category && p.id !== product.id)
+    .slice(0, 4);
+
+  // If not enough in same category, top up with other featured products
+  const displayRelated = relatedProducts.length >= 2
+    ? relatedProducts
+    : [
+        ...relatedProducts,
+        ...products.filter((p) => p.id !== product.id && !relatedProducts.includes(p)).slice(0, 4 - relatedProducts.length),
+      ];
+
   return (
-    <div className="py-8">
-      <Link href="/products" className="inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-white mb-8 transition-colors">
-        <ArrowLeft size={16} /> Back to products
-      </Link>
+    <div className="py-4">
+      {/* Breadcrumb Navigation */}
+      <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs sm:text-sm text-zinc-500 mb-8 overflow-x-auto whitespace-nowrap">
+        <Link href="/" className="hover:text-zinc-900 dark:hover:text-white transition-colors">
+          Home
+        </Link>
+        <ChevronRight size={14} className="shrink-0" />
+        <Link href="/products" className="hover:text-zinc-900 dark:hover:text-white transition-colors">
+          Catalog
+        </Link>
+        <ChevronRight size={14} className="shrink-0" />
+        <Link
+          href={`/products?category=${product.category}`}
+          className="hover:text-zinc-900 dark:hover:text-white transition-colors capitalize"
+        >
+          {product.category}
+        </Link>
+        <ChevronRight size={14} className="shrink-0" />
+        <span className="font-semibold text-zinc-900 dark:text-white truncate max-w-xs">
+          {product.name}
+        </span>
+      </nav>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-24">
-        {/* Product Image */}
-        <div className="relative aspect-square rounded-3xl overflow-hidden bg-zinc-100 dark:bg-zinc-900">
-          <Image
-            src={product.image}
-            alt={product.name}
-            fill
-            className="object-cover"
-            priority
-          />
-        </div>
+      {/* Main Product Details */}
+      <ProductDetailClient product={product} />
 
-        {/* Product Info */}
-        <div className="flex flex-col justify-center">
-          <div className="mb-2">
-            <span className="text-sm font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wider">
-              {product.category}
-            </span>
-          </div>
-          <h1 className="text-4xl font-bold tracking-tight mb-4">{product.name}</h1>
-          <p className="text-2xl font-medium mb-6">${product.price}</p>
-          <p className="text-zinc-600 dark:text-zinc-400 mb-8 leading-relaxed">
-            {product.description}
-          </p>
-
-          <div className="mb-10">
-            <h3 className="font-semibold mb-4 text-lg">Key Features</h3>
-            <ul className="space-y-3">
-              {product.features.map((feature, index) => (
-                <li key={index} className="flex items-center gap-3 text-zinc-700 dark:text-zinc-300">
-                  <div className="w-1.5 h-1.5 rounded-full bg-blue-600"></div>
-                  {feature}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="mt-auto">
-            <AddToCartButton product={product} />
-
-            <div className="grid grid-cols-3 gap-4 mt-8 pt-8 border-t border-zinc-200 dark:border-zinc-800">
-              <div className="flex flex-col items-center text-center gap-2 text-zinc-500">
-                <Truck size={24} className="text-zinc-400" />
-                <span className="text-xs">Free Shipping</span>
-              </div>
-              <div className="flex flex-col items-center text-center gap-2 text-zinc-500">
-                <ShieldCheck size={24} className="text-zinc-400" />
-                <span className="text-xs">2 Year Warranty</span>
-              </div>
-              <div className="flex flex-col items-center text-center gap-2 text-zinc-500">
-                <RotateCcw size={24} className="text-zinc-400" />
-                <span className="text-xs">30-Day Returns</span>
-              </div>
+      {/* Related Hardware Section */}
+      {displayRelated.length > 0 && (
+        <section className="mt-20 pt-16 border-t border-zinc-200 dark:border-zinc-800">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-8 gap-4">
+            <div>
+              <span className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+                You Might Also Like
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight mt-1">
+                Frequently Paired Hardware
+              </h2>
             </div>
+            <Link
+              href="/products"
+              className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              Browse complete catalog
+            </Link>
           </div>
-        </div>
-      </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {displayRelated.map((related) => (
+              <ProductCard key={related.id} product={related} />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
