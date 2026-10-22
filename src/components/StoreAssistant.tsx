@@ -14,6 +14,7 @@ import {
   ArrowRight,
   RefreshCw,
   Cpu,
+  AlertCircle,
 } from "lucide-react";
 import { useStore } from "@/store/useStore";
 import { products } from "@/data/products";
@@ -46,7 +47,7 @@ export default function StoreAssistant() {
   const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  const { messages, sendMessage, status } = useChat();
+  const { messages, sendMessage, status, error, clearError } = useChat();
   const isLoading = status === "submitted" || status === "streaming";
 
   // Auto-scroll to bottom on message stream updates
@@ -54,7 +55,7 @@ export default function StoreAssistant() {
     if (isOpen) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages, isOpen, status]);
+  }, [messages, isOpen, status, error]);
 
   // Sync added items to the global Zustand cart
   const handleSyncToStore = (productId: string, quantity: number = 1) => {
@@ -67,6 +68,7 @@ export default function StoreAssistant() {
   const handleSend = (textToSend?: string) => {
     const query = textToSend || input;
     if (!query.trim() || isLoading) return;
+    if (clearError) clearError();
     sendMessage({ text: query.trim() });
     setInput("");
   };
@@ -232,6 +234,31 @@ export default function StoreAssistant() {
               </div>
             )}
 
+            {/* Error Notification Banner */}
+            {error && (
+              <div className="p-3.5 rounded-2xl bg-rose-950/40 border border-rose-500/30 text-rose-200 text-xs flex items-start justify-between gap-2.5 animate-in fade-in">
+                <div className="flex items-start gap-2">
+                  <AlertCircle size={15} className="text-rose-400 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold text-rose-300">Connection error</p>
+                    <p className="text-[11px] text-rose-200/80 mt-0.5 leading-relaxed">
+                      {error.message || "Failed to reach the assistant. Please try again."}
+                    </p>
+                  </div>
+                </div>
+                {clearError && (
+                  <button
+                    type="button"
+                    onClick={() => clearError()}
+                    className="p-1 hover:bg-rose-900/40 rounded-lg text-rose-400 hover:text-rose-200 transition-colors cursor-pointer shrink-0"
+                    aria-label="Dismiss error"
+                  >
+                    <X size={13} />
+                  </button>
+                )}
+              </div>
+            )}
+
             <div ref={messagesEndRef} />
           </div>
 
@@ -331,7 +358,13 @@ function MessageRenderer({
           part.type === "tool-addToCart" ||
           (part.type === "dynamic-tool" && part.toolName === "addToCart");
 
-        if (isAddToCart && (part.state === "result" || part.output)) {
+        if (
+          isAddToCart &&
+          (part.state === "result" ||
+            part.state === "output-available" ||
+            part.output ||
+            part.result)
+        ) {
           const result = part.output || part.result;
           return (
             <AddToCartResultBadge

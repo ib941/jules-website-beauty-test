@@ -1,15 +1,16 @@
-import { streamText, tool, stepCountIs } from "ai";
+import {
+  streamText,
+  tool,
+  stepCountIs,
+  convertToModelMessages,
+  createUIMessageStream,
+  createUIMessageStreamResponse,
+} from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { z } from "zod";
 import { products } from "@/data/products";
 
 export const maxDuration = 30;
-
-// Configure @ai-sdk/openai provider to connect to Groq's inference endpoint
-const groq = createOpenAI({
-  baseURL: "https://api.groq.com/openai/v1",
-  apiKey: process.env.GROQ_API_KEY || "",
-});
 
 const systemPrompt = `You are the Tech Haven AI Shopping Assistant, an expert, enthusiastic hardware specialist for the Tech Haven store.
 Your mission is to help customers find their ideal laptops and precision tech accessories, provide tailored recommendations, and make purchasing seamless.
@@ -60,43 +61,107 @@ const addToCart = tool({
 export async function POST(req: Request) {
   try {
     const { messages } = await req.json();
-
     const apiKey = process.env.GROQ_API_KEY;
 
-    // Handle missing API key gracefully without crashing the Next.js server
+    // Handle missing API key gracefully (e.g. during local preview without local .env)
     if (!apiKey) {
-      const lastUserMessage = messages?.[messages.length - 1]?.content?.toLowerCase() || "";
+      const lastMsg = messages?.[messages.length - 1];
+      const queryText =
+        lastMsg?.parts
+          ?.filter((p: any) => p.type === "text")
+          ?.map((p: any) => p.text)
+          ?.join(" ") ||
+        (typeof lastMsg?.content === "string" ? lastMsg.content : "") ||
+        "";
 
-      // If user is testing cart addition, provide a simulated tool response for verification
+      const queryLower = queryText.toLowerCase();
       const shouldSimulateCart =
-        lastUserMessage.includes("add") ||
-        lastUserMessage.includes("cart") ||
-        lastUserMessage.includes("yes");
+        queryLower.includes("add") ||
+        queryLower.includes("cart") ||
+        queryLower.includes("buy");
 
       const responseText = shouldSimulateCart
-        ? `I have simulated adding the **Quantum X Pro 16" Laptop** (prod-1) to your cart! 🛍️\n\n*(Note: Please set \`GROQ_API_KEY\` in your environment or Vercel dashboard to enable live GPT OSS 120B inference.)*`
-        : `👋 Hello! I'm your **Tech Haven AI Shopping Assistant**.\n\nI recommend our flagship **Quantum X Pro 16" Laptop** ($1,899.99) featuring a 16-Core Neural SoC and 4K OLED display.\n\n**Would you like me to add this to your cart for you?**\n\n*(Note: Configure \`GROQ_API_KEY\` in your Vercel/local environment to connect directly to the openai/gpt-oss-120b model on Groq).*`;
+        ? `I have simulated adding the **Quantum X Pro 16" Laptop** (prod-1) to your cart! 🛍️\n\n*(Note: Running in local preview mode without local \`GROQ_API_KEY\`. On Vercel, live Groq GPT OSS 120B inference will execute).*`
+        : `👋 Hello! I'm your **Tech Haven AI Shopping Assistant**.\n\nI recommend our flagship **Quantum X Pro 16" Laptop** ($1,899.99) featuring a 16-Core Neural SoC and 4K OLED display.\n\n**Would you like me to add this to your cart for you?**\n\n*(Note: Running in local preview mode without local \`GROQ_API_KEY\`. On your Vercel deployment, live Groq GPT OSS 120B inference is active).*`;
 
-      return new Response(responseText, {
-        headers: { "Content-Type": "text/plain; charset=utf-8" },
+      const stream = createUIMessageStream({
+        execute({ writer }) {
+          writer.write({
+            type: "text-start",
+            id: "fallback-part",
+          });
+          writer.write({
+            type: "text-delta",
+            id: "fallback-part",
+            delta: responseText,
+          });
+          writer.write({
+            type: "text-end",
+            id: "fallback-part",
+          });
+
+          if (shouldSimulateCart) {
+            const toolCallId = `call_${Date.now()}`;
+            writer.write({
+              type: "tool-input-start",
+              toolCallId,
+              toolName: "addToCart",
+            });
+            writer.write({
+              type: "tool-input-available",
+              toolCallId,
+              toolName: "addToCart",
+              input: { productId: "prod-1", quantity: 1 },
+            });
+            writer.write({
+              type: "tool-output-available",
+              toolCallId,
+              output: {
+                status: "Successfully added to cart",
+                productId: "prod-1",
+                productName: "Quantum X Pro 16\" Laptop",
+                price: 1899.99,
+                quantity: 1,
+                timestamp: new Date().toISOString(),
+              },
+            });
+          }
+
+          writer.write({
+            type: "finish",
+          });
+        },
       });
+
+      return createUIMessageStreamResponse({ stream });
     }
 
-    // Call Groq inference engine with exact model ID: openai/gpt-oss-120b
+    // Configure @ai-sdk/openai provider to connect to Groq's inference endpoint
+    const groq = createOpenAI({
+      baseURL: "https://api.groq.com/openai/v1",
+      apiKey,
+    });
+
+    // Convert UIMessages from frontend to ModelMessages for streamText
+    const modelMessages = await convertToModelMessages(messages);
+
+    // Call Groq inference engine with exact model ID: openai/gpt-oss-120b using chat completions
     const result = streamText({
-      model: groq("openai/gpt-oss-120b"),
+      model: groq.chat("openai/gpt-oss-120b"),
       system: systemPrompt,
-      messages,
+      messages: modelMessages,
       tools: {
         addToCart,
       },
       stopWhen: stepCountIs(3), // Multi-step tool execution
     });
 
-    if (typeof result.toUIMessageStreamResponse === "function") {
-      return result.toUIMessageStreamResponse();
-    }
-    return result.toTextStreamResponse();
+    return result.toUIMessageStreamResponse({
+      onError: (error: any) => {
+        console.error("AI Shopping Assistant Groq stream error:", error);
+        return error?.message || "Failed to process shopping assistant request.";
+      },
+    });
   } catch (error: any) {
     console.error("AI Shopping Assistant API error:", error);
     return new Response(
